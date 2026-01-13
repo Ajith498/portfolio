@@ -156,8 +156,8 @@ if (contactForm) {
         return isValid;
     };
 
-    // Form submission
-    contactForm.addEventListener('submit', (e) => {
+    // Form submission with Web3Forms
+    contactForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         // Validate form
@@ -165,46 +165,58 @@ if (contactForm) {
             return;
         }
 
-        // Get form data
-        const formData = {
-            name: document.getElementById('name').value,
-            email: document.getElementById('email').value,
-            phone: document.getElementById('phone').value,
-            subject: document.getElementById('subject').value,
-            message: document.getElementById('message').value
-        };
+        // Show loading state
+        const submitButton = contactForm.querySelector('button[type="submit"]');
+        const originalButtonText = submitButton.textContent;
+        submitButton.textContent = 'Sending...';
+        submitButton.disabled = true;
 
-        // Show success message
-        formMessage.textContent = `Thank you, ${formData.name}! Your message has been sent successfully. I will get back to you soon.`;
-        formMessage.className = 'form-message success';
-        formMessage.style.display = 'block';
+        // Prepare form data
+        const formData = new FormData(contactForm);
+        const object = Object.fromEntries(formData);
+        const json = JSON.stringify(object);
 
-        // Reset form
-        contactForm.reset();
+        try {
+            // Send to Web3Forms API
+            const response = await fetch('https://api.web3forms.com/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: json
+            });
 
-        // Hide message after 5 seconds
-        setTimeout(() => {
-            formMessage.style.display = 'none';
-        }, 5000);
+            const result = await response.json();
 
-        // In a real application, you would send this data to a server
-        // Example:
-        // fetch('/api/contact', {
-        //     method: 'POST',
-        //     headers: {
-        //         'Content-Type': 'application/json'
-        //     },
-        //     body: JSON.stringify(formData)
-        // })
-        // .then(response => response.json())
-        // .then(data => {
-        //     // Handle success
-        // })
-        // .catch(error => {
-        //     // Handle error
-        //     formMessage.textContent = 'Sorry, there was an error sending your message. Please try again.';
-        //     formMessage.className = 'form-message error';
-        // });
+            if (result.success) {
+                // Success message
+                formMessage.textContent = `Thank you, ${object.name}! Your message has been sent successfully. I will get back to you soon at ${object.email}.`;
+                formMessage.className = 'form-message success';
+                formMessage.style.display = 'block';
+
+                // Reset form
+                contactForm.reset();
+
+                // Hide message after 7 seconds
+                setTimeout(() => {
+                    formMessage.style.display = 'none';
+                }, 7000);
+            } else {
+                throw new Error('Form submission failed');
+            }
+        } catch (error) {
+            // Error message
+            formMessage.textContent = 'Sorry, there was an error sending your message. Please try again or contact me directly at sakthivelajith498@gmail.com';
+            formMessage.className = 'form-message error';
+            formMessage.style.display = 'block';
+
+            console.error('Form submission error:', error);
+        } finally {
+            // Reset button
+            submitButton.textContent = originalButtonText;
+            submitButton.disabled = false;
+        }
     });
 
     // Real-time validation
